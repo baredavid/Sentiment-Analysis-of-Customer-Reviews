@@ -1,0 +1,276 @@
+---
+title: "Social Network Analysis - R Notebook"
+output: html_notebook
+---
+
+
+Clean the the R environment.
+```{r}
+rm(list = ls()) # remove all objects in our R environment
+```
+
+
+The actors data frame is a list of all of the referenced actors from the three previously mentioned movies. The eight actors in this network are Tom Hanks, Gary Sinise, Robin Wright, Bill Paxton, Kevin Bacon, Ed Harris, Sean Connery and Nicolas Cage. Note that these are only the biggest stars from these movies in order to keep the network small.
+
+
+These are the actor’s name, gender, and if they have won or been nominated for an Academy Award for Best Actor or Actress.
+
+```{r}
+actors <- read.csv(file = 'actors.csv')
+head(actors)
+
+
+```
+
+The movies data frame contains connections between actors based on what movies they were in together.
+
+```{r}
+movies <- read.csv(file = 'movies.csv')
+head(movies)
+```
+*** Building the Network Data ***
+
+Install the igraph package for getting access to tools for our social network analysis.
+
+```{r}
+#install.packages("igraph") run this line without # if the package has not been installed before.
+library(igraph)
+```
+
+
+The first step in building the network is to create an igraph object. We will use the igraph function graph.data.frame to create this object from our existing data frames. The d variable takes the edges connecting the actor nodes that are held in the movies dataframe that was created, the vertices variable takes the actor nodes that are listed in the actors dataframe. There are social networks where the relationship is directional, for example a professor may have a directed relationship where he teaches students. As this is a list of actors who were in various movies together, this is an undirected network so the directed variable takes an argument of FALSE.
+
+```{r}
+ # Use the 'graph_from_data_frame' function from the 'igraph' package
+# Specify the data frame that contains the edge list for the graph
+# Specify the vertex attribute data frame for the graph
+# Specify that the graph should be undirected (i.e., edges do not have a direction)
+actorNetwork <- graph_from_data_frame(d=movies, vertices=actors, directed=F)
+```
+
+```{r}
+# Access the entire graph object 'actorNetwork'
+actorNetwork[] # to see the adjacency matrix
+```
+
+
+*** Visualizing the Social Network ***
+
+
+```{r}
+# Set the random seed to a fixed value for reproducibility
+set.seed(222)
+
+# Plot the graph object 'actorNetwork'
+plot(actorNetwork)
+```
+
+We can also choose the layout for the social network plot.
+
+```{r}
+# Set the random seed to a fixed value for reproducibility
+set.seed(222)
+
+# Set the plotting parameters to create a 2x3 grid of plots
+par(mfrow=c(2, 3), mar=c(0,0,1,0))
+
+# Plot the graph object 'actorNetwork' using the 'layout_randomly' algorithm
+plot(actorNetwork, layout=layout_randomly, main="Random")
+
+# Plot the graph object 'actorNetwork' using the 'layout_in_circle' algorithm
+plot(actorNetwork, layout=layout_in_circle, main="Circle")
+
+# Plot the graph object 'actorNetwork' using the 'layout_as_star' algorithm
+plot(actorNetwork, layout=layout_as_star, main="Star")
+
+# Plot the graph object 'actorNetwork' using the 'layout_as_tree' algorithm
+plot(actorNetwork, layout=layout_as_tree, main="Tree")
+
+# Plot the graph object 'actorNetwork' using the 'layout_on_grid' algorithm
+plot(actorNetwork, layout=layout_on_grid, main="Grid")
+
+# Plot the graph object 'actorNetwork' using the 'layout_with_fr' algorithm (force-directed layout)
+plot(actorNetwork, layout=layout_with_fr, main="Force-directed")
+
+```
+
+
+```{r}
+# Retrieve the attributes of the edges in the 'actorNetwork' graph
+edge_attributes <- edge_attr(actorNetwork)
+
+# Print the edge attributes data frame
+print(edge_attributes)
+
+```
+
+We can color code the edges in the graph using additional information, such as the movies that links the actors.
+
+
+
+```{r}
+# Set the random seed to a fixed value for reproducibility
+set.seed(222)
+
+# Add a new attribute 'color' to the edges in the 'actorNetwork' graph
+E(actorNetwork)$color <- ifelse(E(actorNetwork)$Movie == "Forest Gump", "green",
+                                 ifelse(E(actorNetwork)$Movie == "Apollo 13", "red",
+                                        "blue"))
+
+# Re-plot the 'actorNetwork' graph with the new 'color' attribute
+plot(actorNetwork)
+
+```
+
+Let's also add a legend so we know what each color means.
+
+```{r}
+# Set the random seed to a fixed value for reproducibility
+set.seed(222)
+
+# Re-plot the 'actorNetwork' graph with a white frame around the vertices
+plot(actorNetwork, vertex.frame.color="white")
+
+# Add a legend to the plot
+legend("topleft", c("Forest Gump","Apollo 13", "The Rock"),
+       col=c("green","red","blue"), lty=1, cex=.8)
+
+```
+
+```{r}
+# Retrieve the attributes of the vertices in the 'actorNetwork' graph
+vertex_attributes <- vertex_attr(actorNetwork)
+
+# Print the vertex attributes data frame
+print(vertex_attributes)
+```
+
+We can color code the nodes in the graph using additional information on the nodes, such as the award information.
+
+```{r}
+# Set the random seed to a fixed value for reproducibility
+set.seed(222)
+
+# Add a new attribute 'color' to the vertices in the 'actorNetwork' graph
+V(actorNetwork)$color <- ifelse(V(actorNetwork)$BestActorActress == "Winner", "yellow",
+                                 ifelse(V(actorNetwork)$BestActorActress == "Nominated","orange",
+                                        "grey"))
+
+# Re-plot the 'actorNetwork' graph with the new 'color' attribute
+plot(actorNetwork)
+```
+
+Let's also add a legend so we know what each color means.
+
+```{r}
+# Set the random seed to a fixed value for reproducibility
+set.seed(222)
+
+# Re-plot the 'actorNetwork' graph with a white frame around the vertices
+plot(actorNetwork, vertex.frame.color="white")
+
+# Add a legend for the edge colors
+legend("topleft", c("Forest Gump","Apollo 13", "The Rock"),
+       col=c("green","red","blue"), lty=1, cex=.8)
+
+# Add a legend for the vertex colors
+legend("bottomright", c("Winner","Nominee", "Not Nominated"), pch=21,
+       col="#777777", pt.bg=c("yellow","orange","grey"), pt.cex=2, cex=.8)
+
+```
+
+*** Descriptive Analysis of the Social Network ***
+
+Degree Centrality
+Degree centrality is simplest of the methods, it measures the number of connections between a node and all other nodes.
+
+```{r}
+# Calculate the degree of each vertex in the 'actorNetwork' graph
+vertex_degrees <- degree(actorNetwork)
+
+# Print the vertex degrees vector
+print(vertex_degrees)
+
+```
+
+Bacon Score
+The function distances can calculate the shortest paths between nodes on a network.
+
+```{r}
+# Calculate the shortest path distance between 'Kevin Bacon' and all other vertices in the 'actorNetwork' graph
+distance_matrix <- distances(actorNetwork, v=V(actorNetwork)["Kevin Bacon"], to=V(actorNetwork))
+
+# Print the distance matrix
+print(distance_matrix)
+
+```
+
+Closeness Centrality
+Closeness centrality is an evaluation of the proximity of a node to all other nodes in a network, not only the nodes to which it is directly connected. The closeness centrality of a node is defined by the inverse of the average length of the shortest paths to or from all the other nodes in the graph.
+
+Raw (absolute) closeness centrality
+```{r}
+# Calculate the closeness centrality of each vertex in the 'actorNetwork' graph
+vertex_closeness <- closeness(actorNetwork, normalized=F)
+
+# Print the vertex closeness centrality vector
+print(vertex_closeness)
+
+```
+
+Normalized closeness centrality
+```{r}
+# Calculate the normalized closeness centrality of each vertex in the 'actorNetwork' graph
+vertex_closeness_normalized <- closeness(actorNetwork, normalized=T)
+
+# Print the normalized vertex closeness centrality vector
+print(vertex_closeness_normalized)
+
+```
+
+Betweenness Centrality
+Betweenness centrality offers another way of measuring an individuals centrality. In social networks there can be weakly connected individuals who are still indispensable to certain transactions. Although these individuals may not have a high level of degree centrality, they may be chokepoints through which information moves. The betweenness of a given point to two other points is its capacity of standing on the paths that connect them (Degenne and Forse 1999).
+
+```{r}
+# Calculate the betweenness centrality of each vertex in the 'actorNetwork' graph
+vertex_betweenness <- betweenness(actorNetwork, normalized=F)
+
+# Print the vertex betweenness centrality vector
+print(vertex_betweenness)
+
+```
+Normalized
+```{r}
+# Calculate the normalized betweenness centrality of each vertex in the 'actorNetwork' graph
+vertex_betweenness_normalized <- betweenness(actorNetwork, normalized=T)
+
+# Print the normalized vertex betweenness centrality vector
+print(vertex_betweenness_normalized)
+
+```
+
+
+*** Cluster Detection ***
+
+```{r}
+#Community detection
+# Set the random seed to a fixed value for reproducibility
+set.seed(222)
+
+# Perform edge betweenness community detection on the 'actorNetwork' graph
+comm <- cluster_edge_betweenness(actorNetwork)
+
+# Plot the resulting communities on the 'actorNetwork' graph
+plot(comm, actorNetwork)
+
+```
+
+
+References:
+
+https://rpubs.com/wctucker/302110
+http://pablobarbera.com/big-data-upf/html/02a-networks-intro-visualization.html
+
+
+
+
