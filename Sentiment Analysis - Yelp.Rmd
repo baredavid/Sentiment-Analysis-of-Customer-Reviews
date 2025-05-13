@@ -1,0 +1,132 @@
+---
+title: "Sentiment Analysis - R Notebook"
+output: html_notebook
+---
+
+
+Clean the the R environment.
+```{r}
+rm(list = ls()) # remove all objects in our R environment
+```
+
+Read the "Yelp_reviews_s.csv" file, assign the name "reviews," and report the first couple of observations.
+
+```{r}
+
+reviews <- read.csv(file = 'Yelp_reviews_s.csv')
+head(reviews)
+
+```
+Compute the length of reviews in terms of number of words as well as generate summary statistics and the histogram of review lenght.
+
+```{r}
+# Splitting each review text into words and calculating the length of each review
+review_length <- sapply(strsplit(reviews$text, " "), length)
+
+# Generating descriptive statistics (min, 1st quartile, median, 3rd quartile, max) for the review_length vector
+summary(review_length)
+
+# Creating a histogram of the review_length vector
+hist(review_length , col = 'purple')
+
+```
+Generate the list of words in the review texts using the unnest_tokens() function.
+
+```{r}
+# Loading the tidytext library for text mining
+library(tidytext)
+
+# Loading the dplyr library for data manipulation
+library(dplyr)
+
+# Creating a new data frame, text_stem, from the reviews data frame
+# The select function is used to select the 'text' column
+# The unnest_tokens function is used to split the text into individual words
+text_stem <- reviews %>%
+  select(text) %>%
+  tidytext::unnest_tokens(word, text)
+
+# Displaying the first 6 rows of the new data frame
+head(text_stem)
+
+```
+As we did in an earlier session, remove the stop words from our initial pool of words.
+
+```{r}
+# Removing stop words from the list of words
+# The anti_join function is used to remove rows from text_stem that are also present in stop_words
+cleaned_text_stem <- text_stem %>%
+  anti_join(stop_words)
+
+# Displaying the first 6 rows of the cleaned data frame
+head(cleaned_text_stem)
+
+```
+
+Find and visualize the top 20 commonly used words in Yelp review texts.
+
+```{r}
+# Loading the ggplot2 library for data visualization
+library(ggplot2)
+
+# Creating a bar chart of the top 20 most frequent words in the reviews
+cleaned_text_stem %>%
+  count(word, sort=TRUE) %>% # Counting the frequency of each word
+  top_n(20) %>% # Selecting the top 20 words
+  mutate(word = reorder(word, n)) %>% # Reordering the words by frequency
+  ggplot(aes(x=word, y=n)) + # Creating a ggplot object with word on the x-axis and frequency on the y-axis
+  geom_col() + # Adding a bar chart layer
+  coord_flip() + # Flipping the coordinates so that words are on the y-axis
+  labs(x= "Words", y= "Count", title = "Top words in reviews") # Adding labels to the x-axis, y-axis, and title
+ 
+
+```
+Now let's generate a word cloud to visualize the word frequency in a different way.
+
+```{r}
+# Loading the wordcloud library for creating word clouds
+library(wordcloud)
+
+# Creating a word cloud of the reviews
+# The count function is used to count the frequency of each word in cleaned_text_stem
+count_words <- count(cleaned_text_stem, word)
+
+# The wordcloud function is used to create the word cloud
+# The words argument is set to the words in count_words$word
+# The freq argument is set to the frequency of each word in count_words$n
+# The min.freq argument is set to 1, so that all words with a frequency of at least 1 are included in the word cloud
+# The max.words argument is set to 100, so that only the 100 most frequent words are included in the word cloud
+# The random.order argument is set to FALSE, so that the words are arranged in descending order of frequency
+# The rot.per argument is set to 0.35, so that the words are rotated by a random angle between -35 and 35 degrees
+# The colors argument is set to a palette of 8 colors from the Dark2 color scheme in the RColorBrewer package
+wordcloud(words = count_words$word, freq = count_words$n, min.freq = 1,
+          max.words=100, random.order=FALSE, rot.per=0.35,
+          colors= brewer.pal(8, "Dark2"))
+
+```
+Looking good!
+
+Now we will do some sentiment analysis at the word level using the get_sentiments() function and the "bing" option.
+
+
+```{r}
+# Loading the tidytext library for text mining
+library(tidytext)
+
+# Loading the textdata library for sentiment analysis
+library(textdata)
+
+# Performing sentiment analysis on the cleaned text using the Bing sentiment lexicon
+# The inner_join function is used to join the cleaned_text_stem data frame with the sentiment data frame returned by get_sentiments("bing")
+# The count function is used to count the number of occurrences of each word-sentiment combination
+bing_reviews <- cleaned_text_stem %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE)
+
+# Displaying the resulting data frame
+bing_reviews
+
+```
+
+Well done!!
+
